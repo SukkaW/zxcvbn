@@ -1,0 +1,1 @@
+import{_ as n,M as a,p as o,q as c,N as r,Q as e,t as s}from"./framework-9e042e77.js";const d={},_=e("h1",{id:"demo",tabindex:"-1"},[e("a",{class:"header-anchor",href:"#demo","aria-hidden":"true"},"#"),s(" Demo")],-1);function i(l,m){const t=a("ZxcvbnInteractive");return o(),c("div",null,[_,r(t)])}const x=n(d,[["render",i],["__file","index.html.vue"]]);export{x as default};
