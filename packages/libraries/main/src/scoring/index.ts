@@ -7,12 +7,113 @@ import {
   MatchEstimated,
   LooseObject,
 } from '../types'
+import { Options } from '../Options'
 
-const scoringHelper = {
-  password: '',
-  optimal: {} as any,
-  excludeAdditive: false,
-  separatorRegex: undefined as RegExp | null | undefined,
+export default class Scoring {
+  optimal: LooseObject = {}
+
+  excludeAdditive = false
+
+  constructor(
+    private options: Options,
+    private password = '',
+  ) {}
+
+  // ------------------------------------------------------------------------------
+  // search --- most guessable match sequence -------------------------------------
+  // ------------------------------------------------------------------------------
+  //
+  // takes a sequence of overlapping matches, returns the non-overlapping sequence with
+  // minimum guesses. the following is a O(l_max * (n + m)) dynamic programming algorithm
+  // for a length-n password with m candidate matches. l_max is the maximum optimal
+  // sequence length spanning each prefix of the password. In practice, it rarely exceeds 5 and the
+  // search terminates rapidly.
+  //
+  // the optimal "minimum guesses" sequence is here defined to be the sequence that
+  // minimizes the following function:
+  //
+  //    g = sequenceLength! * Product(m.guesses for m in sequence) + D^(sequenceLength - 1)
+  //
+  // where sequenceLength is the length of the sequence.
+  //
+  // the factorial term is the number of ways to order sequenceLength patterns.
+  //
+  // the D^(sequenceLength-1) term is another length penalty, roughly capturing the idea that an
+  // attacker will try lower-length sequences first before trying length-sequenceLength sequences.
+  //
+  // for example, consider a sequence that is date-repeat-dictionary.
+  //  - an attacker would need to try other date-repeat-dictionary combinations,
+  //    hence the product term.
+  //  - an attacker would need to try repeat-date-dictionary, dictionary-repeat-date,
+  //    ..., hence the factorial term.
+  //  - an attacker would also likely try length-1 (dictionary) and length-2 (dictionary-date)
+  //    sequences before length-3. assuming at minimum D guesses per pattern type,
+  //    D^(sequenceLength-1) approximates Sum(D^i for i in [1..sequenceLength-1]
+  //
+  // ------------------------------------------------------------------------------
+  mostGuessableMatchSequence(
+    matches: MatchExtended[],
+    excludeAdditive = false,
+  ) {
+    this.excludeAdditive = excludeAdditive
+    const passwordLength = this.password.length
+    // partition matches into sublists according to ending index j
+    let matchesByCoordinateJ = this.fillArray(passwordLength, 'array') as any[]
+
+    matches.forEach((match) => {
+      matchesByCoordinateJ[match.j].push(match)
+    })
+    // small detail: for deterministic output, sort each sublist by i.
+    matchesByCoordinateJ = matchesByCoordinateJ.map((match) =>
+      match.sort((m1: MatchExtended, m2: MatchExtended) => m1.i - m2.i),
+    )
+
+    this.optimal = {
+      // optimal.m[k][sequenceLength] holds final match in the best length-sequenceLength
+      // match sequence covering the
+      // password prefix up to k, inclusive.
+      // if there is no length-sequenceLength sequence that scores better (fewer guesses) than
+      // a shorter match sequence spanning the same prefix,
+      // optimal.m[k][sequenceLength] is undefined.
+      m: this.fillArray(passwordLength, 'object'),
+      // same structure as optimal.m -- holds the product term Prod(m.guesses for m in sequence).
+      // optimal.pi allows for fast (non-looping) updates to the minimization function.
+      pi: this.fillArray(passwordLength, 'object'),
+      // same structure as optimal.m -- holds the overall metric.
+      g: this.fillArray(passwordLength, 'object'),
+    }
+
+    for (let k = 0; k < passwordLength; k += 1) {
+      matchesByCoordinateJ[k].forEach((match: MatchExtended) => {
+        if (match.i > 0) {
+          Object.keys(this.optimal.m[match.i - 1]).forEach((sequenceLength) => {
+            this.update(match, parseInt(sequenceLength, 10) + 1)
+          })
+        } else {
+          this.update(match, 1)
+        }
+      })
+      this.bruteforceUpdate(k)
+    }
+    const optimalMatchSequence = this.unwind(passwordLength)
+    const optimalSequenceLength = optimalMatchSequence.length
+    const guesses = this.getGuesses(optimalSequenceLength)
+    return {
+      password: this.password,
+      guesses,
+      guessesLog10: utils.log10(guesses),
+      sequence: optimalMatchSequence,
+    }
+  }
+
+  getGuesses(optimalSequenceLength: number) {
+    const passwordLength = this.password.length
+    if (this.password.length === 0) {
+      return 1
+    }
+    return this.optimal.g[passwordLength - 1][optimalSequenceLength]
+  }
+
   fillArray(size: number, valueType: 'object' | 'array') {
     const result: typeof valueType extends 'array' ? string[] : LooseObject[] =
       []
@@ -24,7 +125,8 @@ const scoringHelper = {
       result.push(value)
     }
     return result
-  },
+  }
+
   // helper: make bruteforce match objects spanning i to j, inclusive.
   makeBruteforceMatch(i: number, j: number): BruteForceMatch {
     return {
@@ -33,13 +135,14 @@ const scoringHelper = {
       i,
       j,
     }
-  },
+  }
+
   // helper: considers whether a length-sequenceLength
   // sequence ending at match m is better (fewer guesses)
   // than previously encountered sequences, updating state if so.
   update(match: MatchExtended, sequenceLength: number) {
     const k = match.j
-    const estimatedMatch = estimateGuesses(match, this.password)
+    const estimatedMatch = estimateGuesses(this.options, match, this.password)
     let pi = estimatedMatch.guesses as number
     if (sequenceLength > 1) {
       // we're considering a length-sequenceLength sequence ending with match m:
@@ -72,7 +175,7 @@ const scoringHelper = {
       this.optimal.m[k][sequenceLength] = estimatedMatch
       this.optimal.pi[k][sequenceLength] = pi
     }
-  },
+  }
 
   // helper: evaluate bruteforce matches ending at passwordCharIndex.
   bruteforceUpdate(passwordCharIndex: number) {
@@ -99,7 +202,7 @@ const scoringHelper = {
         }
       })
     }
-  },
+  }
 
   // helper: step backwards through optimal.m starting at the end,
   // constructing the final optimal match sequence.
@@ -128,113 +231,5 @@ const scoringHelper = {
       sequenceLength -= 1
     }
     return optimalMatchSequence
-  },
-}
-
-export default {
-  // ------------------------------------------------------------------------------
-  // search --- most guessable match sequence -------------------------------------
-  // ------------------------------------------------------------------------------
-  //
-  // takes a sequence of overlapping matches, returns the non-overlapping sequence with
-  // minimum guesses. the following is a O(l_max * (n + m)) dynamic programming algorithm
-  // for a length-n password with m candidate matches. l_max is the maximum optimal
-  // sequence length spanning each prefix of the password. In practice it rarely exceeds 5 and the
-  // search terminates rapidly.
-  //
-  // the optimal "minimum guesses" sequence is here defined to be the sequence that
-  // minimizes the following function:
-  //
-  //    g = sequenceLength! * Product(m.guesses for m in sequence) + D^(sequenceLength - 1)
-  //
-  // where sequenceLength is the length of the sequence.
-  //
-  // the factorial term is the number of ways to order sequenceLength patterns.
-  //
-  // the D^(sequenceLength-1) term is another length penalty, roughly capturing the idea that an
-  // attacker will try lower-length sequences first before trying length-sequenceLength sequences.
-  //
-  // for example, consider a sequence that is date-repeat-dictionary.
-  //  - an attacker would need to try other date-repeat-dictionary combinations,
-  //    hence the product term.
-  //  - an attacker would need to try repeat-date-dictionary, dictionary-repeat-date,
-  //    ..., hence the factorial term.
-  //  - an attacker would also likely try length-1 (dictionary) and length-2 (dictionary-date)
-  //    sequences before length-3. assuming at minimum D guesses per pattern type,
-  //    D^(sequenceLength-1) approximates Sum(D^i for i in [1..sequenceLength-1]
-  //
-  // ------------------------------------------------------------------------------
-  mostGuessableMatchSequence(
-    password: string,
-    matches: MatchExtended[],
-    excludeAdditive = false,
-  ) {
-    scoringHelper.password = password
-    scoringHelper.excludeAdditive = excludeAdditive
-    const passwordLength = password.length
-    // partition matches into sublists according to ending index j
-    let matchesByCoordinateJ = scoringHelper.fillArray(
-      passwordLength,
-      'array',
-    ) as any[]
-
-    matches.forEach((match) => {
-      matchesByCoordinateJ[match.j].push(match)
-    })
-    // small detail: for deterministic output, sort each sublist by i.
-    matchesByCoordinateJ = matchesByCoordinateJ.map((match) =>
-      match.sort((m1: MatchExtended, m2: MatchExtended) => m1.i - m2.i),
-    )
-
-    scoringHelper.optimal = {
-      // optimal.m[k][sequenceLength] holds final match in the best length-sequenceLength
-      // match sequence covering the
-      // password prefix up to k, inclusive.
-      // if there is no length-sequenceLength sequence that scores better (fewer guesses) than
-      // a shorter match sequence spanning the same prefix,
-      // optimal.m[k][sequenceLength] is undefined.
-      m: scoringHelper.fillArray(passwordLength, 'object'),
-      // same structure as optimal.m -- holds the product term Prod(m.guesses for m in sequence).
-      // optimal.pi allows for fast (non-looping) updates to the minimization function.
-      pi: scoringHelper.fillArray(passwordLength, 'object'),
-      // same structure as optimal.m -- holds the overall metric.
-      g: scoringHelper.fillArray(passwordLength, 'object'),
-    }
-
-    for (let k = 0; k < passwordLength; k += 1) {
-      matchesByCoordinateJ[k].forEach((match: MatchExtended) => {
-        if (match.i > 0) {
-          Object.keys(scoringHelper.optimal.m[match.i - 1]).forEach(
-            (sequenceLength) => {
-              scoringHelper.update(match, parseInt(sequenceLength, 10) + 1)
-            },
-          )
-        } else {
-          scoringHelper.update(match, 1)
-        }
-      })
-      scoringHelper.bruteforceUpdate(k)
-    }
-    const optimalMatchSequence = scoringHelper.unwind(passwordLength)
-    const optimalSequenceLength = optimalMatchSequence.length
-    const guesses = this.getGuesses(password, optimalSequenceLength)
-    return {
-      password,
-      guesses,
-      guessesLog10: utils.log10(guesses),
-      sequence: optimalMatchSequence,
-    }
-  },
-
-  getGuesses(password: string, optimalSequenceLength: number) {
-    const passwordLength = password.length
-    let guesses = 0
-    if (password.length === 0) {
-      guesses = 1
-    } else {
-      guesses =
-        scoringHelper.optimal.g[passwordLength - 1][optimalSequenceLength]
-    }
-    return guesses
-  },
+  }
 }

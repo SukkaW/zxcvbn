@@ -3,8 +3,9 @@ import * as zxcvbnEnPackage from '../../../../../languages/en/src'
 import MatchDictionary from '../../../src/matcher/dictionary/matching'
 import checkMatches from '../../helper/checkMatches'
 import genpws from '../../helper/genpws'
-import { zxcvbnOptions } from '../../../src/Options'
+import { Options } from '../../../src/Options'
 
+const zxcvbnOptions = new Options()
 zxcvbnOptions.setOptions({
   dictionary: {
     ...zxcvbnCommonPackage.dictionary,
@@ -15,7 +16,7 @@ zxcvbnOptions.setOptions({
 
 describe('dictionary matching', () => {
   describe('Default dictionary', () => {
-    const matchDictionary = new MatchDictionary()
+    const matchDictionary = new MatchDictionary(zxcvbnOptions)
     const matches = matchDictionary
       .match({ password: 'we' })
       // @ts-ignore
@@ -44,7 +45,7 @@ describe('dictionary matching', () => {
     zxcvbnOptions.setOptions({
       dictionary: testDicts,
     })
-    const matchDictionary = new MatchDictionary()
+    const matchDictionary = new MatchDictionary(zxcvbnOptions)
     const dm = (pw: string) =>
       matchDictionary
         .match({ password: pw })
@@ -160,7 +161,7 @@ describe('dictionary matching', () => {
         userInputs: ['foo', 'bar'],
       },
     })
-    const matchDictionary = new MatchDictionary()
+    const matchDictionary = new MatchDictionary(zxcvbnOptions)
     const matches = matchDictionary
       .match({ password: 'foobar' })
       // @ts-ignore

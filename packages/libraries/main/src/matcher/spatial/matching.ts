@@ -1,5 +1,5 @@
 import { sorted, extend } from '../../helper'
-import { zxcvbnOptions } from '../../Options'
+import { Options } from '../../Options'
 import { LooseObject, SpatialMatch } from '../../types'
 
 interface SpatialMatchOptions {
@@ -11,12 +11,14 @@ interface SpatialMatchOptions {
  * ------------------------------------------------------------------------------
  */
 class MatchSpatial {
+  constructor(private options: Options) {}
+
   SHIFTED_RX = /[~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?]/
 
   match({ password }: SpatialMatchOptions) {
     const matches: SpatialMatch[] = []
-    Object.keys(zxcvbnOptions.graphs).forEach((graphName) => {
-      const graph = zxcvbnOptions.graphs[graphName]
+    Object.keys(this.options.graphs).forEach((graphName) => {
+      const graph = this.options.graphs[graphName]
       extend(matches, this.helper(password, graph, graphName))
     })
     return sorted(matches)

@@ -1,14 +1,15 @@
 import translations from '../../../languages/en/src/translations'
-import { zxcvbnOptions } from '../src/Options'
+import { Options } from '../src/Options'
 import Feedback from '../src/Feedback'
 
+const zxcvbnOptions = new Options()
 zxcvbnOptions.setOptions({
   translations,
 })
 
 describe('feedback', () => {
   describe('with default translations', () => {
-    const feedbackClass = new Feedback()
+    const feedbackClass = new Feedback(zxcvbnOptions)
 
     it('should return no feedback for a good password', () => {
       // @ts-ignore

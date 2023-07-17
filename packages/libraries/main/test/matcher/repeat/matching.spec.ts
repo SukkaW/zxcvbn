@@ -2,13 +2,14 @@ import MatchRepeat from '../../../src/matcher/repeat/matching'
 import checkMatches from '../../helper/checkMatches'
 import genpws from '../../helper/genpws'
 import MatchOmni from '../../../src/Matching'
-import { zxcvbnOptions } from '../../../src/Options'
+import { Options } from '../../../src/Options'
 import { RepeatMatch } from '../../../src/types'
 
+const zxcvbnOptions = new Options()
 zxcvbnOptions.setOptions()
-const omniMatch = new MatchOmni()
+const omniMatch = new MatchOmni(zxcvbnOptions)
 describe('repeat matching', () => {
-  const matchRepeat = new MatchRepeat()
+  const matchRepeat = new MatchRepeat(zxcvbnOptions)
 
   it("doesn't match length repeat patterns", () => {
     const data = ['', '#']

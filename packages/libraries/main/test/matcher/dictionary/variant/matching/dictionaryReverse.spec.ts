@@ -1,10 +1,11 @@
 import MatchDictionaryReverse from '../../../../../src/matcher/dictionary/variants/matching/reverse'
 import MatchDictionary from '../../../../../src/matcher/dictionary/matching'
 import checkMatches from '../../../../helper/checkMatches'
-import { zxcvbnOptions } from '../../../../../src/Options'
+import { Options } from '../../../../../src/Options'
 
+const zxcvbnOptions = new Options()
 zxcvbnOptions.setOptions()
-const dictionaryMatcher = new MatchDictionary()
+const dictionaryMatcher = new MatchDictionary(zxcvbnOptions)
 
 describe('dictionary reverse matching', () => {
   const testDicts = {
@@ -14,6 +15,7 @@ describe('dictionary reverse matching', () => {
     dictionary: testDicts,
   })
   const matchDictionaryReverse = new MatchDictionaryReverse(
+    zxcvbnOptions,
     dictionaryMatcher.defaultMatch,
   )
   const password = '0123456789'

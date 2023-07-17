@@ -1,67 +1,85 @@
 import Matching from './Matching'
-import scoring from './scoring'
+import Scoring from './scoring'
 import TimeEstimates from './TimeEstimates'
 import Feedback from './Feedback'
-import { zxcvbnOptions, Options } from './Options'
+
+import { Options } from './Options'
 import debounce from './debounce'
-import { MatchExtended, ZxcvbnResult } from './types'
+import { Matcher, MatchExtended, OptionsType, ZxcvbnResult } from './types'
 
 const time = () => new Date().getTime()
 
-const createReturnValue = (
-  resolvedMatches: MatchExtended[],
-  password: string,
-  start: number,
-): ZxcvbnResult => {
-  const feedback = new Feedback()
-  const timeEstimates = new TimeEstimates()
-  const matchSequence = scoring.mostGuessableMatchSequence(
-    password,
-    resolvedMatches,
-  )
-  const calcTime = time() - start
-  const attackTimes = timeEstimates.estimateAttackTimes(matchSequence.guesses)
+class Zxcvbn {
+  private options: Options
 
-  return {
-    calcTime,
-    ...matchSequence,
-    ...attackTimes,
-    feedback: feedback.getFeedback(attackTimes.score, matchSequence.sequence),
-  }
-}
+  private matching: Matching
 
-const main = (password: string, userInputs?: (string | number)[]) => {
-  if (userInputs) {
-    zxcvbnOptions.extendUserInputsDictionary(userInputs)
+  private feedback: Feedback
+
+  private timeEstimates: TimeEstimates
+
+  constructor(options: OptionsType = {}) {
+    this.options = new Options(options)
+    this.matching = new Matching(this.options)
+    this.feedback = new Feedback(this.options)
+    this.timeEstimates = new TimeEstimates(this.options)
   }
 
-  const matching = new Matching()
+  public addMatcher(name: string, matcher: Matcher) {
+    this.options.addMatcher(name, matcher)
+  }
 
-  return matching.match(password)
-}
+  public check(password: string, userInputs?: (string | number)[]) {
+    const start = time()
+    const matches = this.main(password, userInputs)
 
-export const zxcvbn = (password: string, userInputs?: (string | number)[]) => {
-  const start = time()
-  const matches = main(password, userInputs)
+    if (matches instanceof Promise) {
+      throw new Error(
+        'You are using a Promised matcher, please use `zxcvbnAsync` for it.',
+      )
+    }
+    return this.createReturnValue(matches, password, start)
+  }
 
-  if (matches instanceof Promise) {
-    throw new Error(
-      'You are using a Promised matcher, please use `zxcvbnAsync` for it.',
+  public async checkAsync(password: string, userInputs?: (string | number)[]) {
+    const usedPassword = password.substring(0, this.options.maxLength)
+    const start = time()
+    const matches = await this.main(usedPassword, userInputs)
+
+    return this.createReturnValue(matches, usedPassword, start)
+  }
+
+  private main(password: string, userInputs?: (string | number)[]) {
+    if (userInputs) {
+      this.options.extendUserInputsDictionary(userInputs)
+    }
+
+    return this.matching.match(password)
+  }
+
+  private createReturnValue(
+    resolvedMatches: MatchExtended[],
+    password: string,
+    start: number,
+  ): ZxcvbnResult {
+    const scoring = new Scoring(this.options, password)
+    const matchSequence = scoring.mostGuessableMatchSequence(resolvedMatches)
+    const calcTime = time() - start
+    const attackTimes = this.timeEstimates.estimateAttackTimes(
+      matchSequence.guesses,
     )
+
+    return {
+      calcTime,
+      ...matchSequence,
+      ...attackTimes,
+      feedback: this.feedback.getFeedback(
+        attackTimes.score,
+        matchSequence.sequence,
+      ),
+    }
   }
-  return createReturnValue(matches, password, start)
-}
-
-export const zxcvbnAsync = async (
-  password: string,
-  userInputs?: (string | number)[],
-): Promise<ZxcvbnResult> => {
-  const usedPassword = password.substring(0, zxcvbnOptions.maxLength)
-  const start = time()
-  const matches = await main(usedPassword, userInputs)
-
-  return createReturnValue(matches, usedPassword, start)
 }
 
 export * from './types'
-export { zxcvbnOptions, Options, debounce }
+export { Options, debounce, Zxcvbn }

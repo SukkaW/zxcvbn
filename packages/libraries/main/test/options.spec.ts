@@ -1,7 +1,8 @@
-import { zxcvbnOptions } from '../src/Options'
+import { Options } from '../src/Options'
 import translationKeys from '../src/data/translationKeys'
 
 describe('Options', () => {
+  const zxcvbnOptions = new Options()
   describe('translations', () => {
     it('should return default feedback for no sequence on custom translations', () => {
       zxcvbnOptions.setOptions({ translations: translationKeys })

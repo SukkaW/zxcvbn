@@ -1,6 +1,7 @@
 import { RepeatMatch } from '../../types'
-import scoring from '../../scoring'
 import Matching from '../../Matching'
+import Scoring from '../../scoring'
+import { Options } from '../../Options'
 
 function createRegex({
   isLazy = false,
@@ -25,6 +26,8 @@ interface RepeatMatchOptions {
  *-------------------------------------------------------------------------------
  */
 class MatchRepeat {
+  constructor(private options: Options) {}
+
   // eslint-disable-next-line max-statements
   match({ password, omniMatch }: RepeatMatchOptions) {
     const matches: (RepeatMatch | Promise<RepeatMatch>)[] = []
@@ -134,16 +137,14 @@ class MatchRepeat {
 
   getBaseGuesses(baseToken: string, omniMatch: Matching) {
     const matches = omniMatch.match(baseToken)
+    const scoring = new Scoring(this.options, baseToken)
     if (matches instanceof Promise) {
       return matches.then((resolvedMatches) => {
-        const baseAnalysis = scoring.mostGuessableMatchSequence(
-          baseToken,
-          resolvedMatches,
-        )
+        const baseAnalysis = scoring.mostGuessableMatchSequence(resolvedMatches)
         return baseAnalysis.guesses
       })
     }
-    const baseAnalysis = scoring.mostGuessableMatchSequence(baseToken, matches)
+    const baseAnalysis = scoring.mostGuessableMatchSequence(matches)
     return baseAnalysis.guesses
   }
 }

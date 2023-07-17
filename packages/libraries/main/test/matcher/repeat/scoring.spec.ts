@@ -1,12 +1,13 @@
 import repeatGuesses from '../../../src/matcher/repeat/scoring'
-import scoring from '../../../src/scoring'
 import MatchOmni from '../../../src/Matching'
-import { zxcvbnOptions } from '../../../src/Options'
+import { Options } from '../../../src/Options'
 import { MatchExtended } from '../../../src/types'
+import Scoring from '../../../src/scoring'
 
+const zxcvbnOptions = new Options()
 zxcvbnOptions.setOptions()
 
-const omniMatch = new MatchOmni()
+const omniMatch = new MatchOmni(zxcvbnOptions)
 describe('scoring guesses repeated', () => {
   const data: [string, string, number][] = [
     ['aa', 'a', 2],
@@ -17,8 +18,8 @@ describe('scoring guesses repeated', () => {
   ]
 
   data.forEach(([token, baseToken, repeatCount]) => {
+    const scoring = new Scoring(zxcvbnOptions, baseToken)
     const baseGuesses = scoring.mostGuessableMatchSequence(
-      baseToken,
       omniMatch.match(baseToken) as MatchExtended[],
     ).guesses
     const match = {

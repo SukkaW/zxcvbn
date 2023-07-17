@@ -1,4 +1,4 @@
-import { zxcvbnOptions } from './Options'
+import { Options } from './Options'
 import { CrackTimesDisplay, CrackTimesSeconds, Score } from './types'
 
 const SECOND = 1
@@ -25,12 +25,14 @@ const times = {
  * -------------------------------------------------------------------------------
  */
 class TimeEstimates {
+  constructor(private options: Options) {}
+
   translate(displayStr: string, value: number | undefined) {
     let key = displayStr
     if (value !== undefined && value !== 1) {
       key += 's'
     }
-    const { timeEstimation } = zxcvbnOptions.translations
+    const { timeEstimation } = this.options.translations
     return timeEstimation[key as keyof typeof timeEstimation].replace(
       '{base}',
       `${value}`,

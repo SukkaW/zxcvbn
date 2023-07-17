@@ -1,6 +1,7 @@
-import scoring from '../../src/scoring'
-import { zxcvbnOptions } from '../../src/Options'
+import Scoring from '../../src/scoring'
+import { Options } from '../../src/Options'
 
+const zxcvbnOptions = new Options()
 zxcvbnOptions.setOptions()
 
 describe('scoring search', () => {
@@ -11,9 +12,10 @@ describe('scoring search', () => {
   })
   const excludeAdditive = true
   const password = '0123456789'
+  const scoring = new Scoring(zxcvbnOptions, password)
 
   describe('returns one bruteforce match given an empty match sequence:', () => {
-    const result = scoring.mostGuessableMatchSequence(password, [])
+    const result = scoring.mostGuessableMatchSequence([])
     const firstSequence = result.sequence[0]
 
     it('result.length == 1', () => {
@@ -37,7 +39,6 @@ describe('scoring search', () => {
     const matches = [getMatch(0, 5, 1)]
     const firstMatch = matches[0]
     const result = scoring.mostGuessableMatchSequence(
-      password,
       // @ts-ignore
       matches,
       excludeAdditive,
@@ -65,7 +66,6 @@ describe('scoring search', () => {
     const matches = [getMatch(3, 9, 1)]
     const firstMatch = matches[0]
     const result = scoring.mostGuessableMatchSequence(
-      password,
       // @ts-ignore
       matches,
       excludeAdditive,
@@ -92,7 +92,6 @@ describe('scoring search', () => {
   describe('returns bruteforce + match + bruteforce when match covers an infix:', () => {
     const matches = [getMatch(1, 8, 1)]
     const result = scoring.mostGuessableMatchSequence(
-      password,
       // @ts-ignore
       matches,
       excludeAdditive,
@@ -122,7 +121,6 @@ describe('scoring search', () => {
     const firstMatch = matches[0]
     const secondMatch = matches[1]
     let result = scoring.mostGuessableMatchSequence(
-      password,
       // @ts-ignore
       matches,
       excludeAdditive,
@@ -142,7 +140,6 @@ describe('scoring search', () => {
 
     firstMatch.guesses = 3
     result = scoring.mostGuessableMatchSequence(
-      password,
       // @ts-ignore
       matches,
       excludeAdditive,
@@ -161,7 +158,6 @@ describe('scoring search', () => {
 
     describe('when m0 covers m1 and m2, choose [m0] when m0 < m1 * m2 * fact(2):', () => {
       const result = scoring.mostGuessableMatchSequence(
-        password,
         // @ts-ignore
         matches,
         excludeAdditive,
@@ -178,7 +174,6 @@ describe('scoring search', () => {
     describe('when m0 covers m1 and m2, choose [m1, m2] when m0 > m1 * m2 * fact(2):', () => {
       firstMatch.guesses = 5
       const result = scoring.mostGuessableMatchSequence(
-        password,
         // @ts-ignore
         matches,
         excludeAdditive,

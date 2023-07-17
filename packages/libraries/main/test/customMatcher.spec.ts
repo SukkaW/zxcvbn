@@ -1,10 +1,10 @@
 import * as zxcvbnCommonPackage from '../../../languages/common/src'
 import * as zxcvbnEnPackage from '../../../languages/en/src'
-import { zxcvbn, zxcvbnOptions } from '../src'
+import { Zxcvbn } from '../src'
 import { Match, Matcher } from '../src/types'
 import { sorted } from '../src/helper'
 
-zxcvbnOptions.setOptions({
+const zxcvbn = new Zxcvbn({
   dictionary: {
     ...zxcvbnCommonPackage.dictionary,
     ...zxcvbnEnPackage.dictionary,
@@ -41,11 +41,11 @@ const minLengthMatcher: Matcher = {
   },
 }
 
-zxcvbnOptions.addMatcher('minLength', minLengthMatcher)
+zxcvbn.addMatcher('minLength', minLengthMatcher)
 
 describe('customMatcher', () => {
   it('should use minLength custom matcher', () => {
-    const result = zxcvbn('ep8fkw8ds')
+    const result = zxcvbn.check('ep8fkw8ds')
     expect(result.calcTime).toBeDefined()
     result.calcTime = 0
     expect(result).toEqual({

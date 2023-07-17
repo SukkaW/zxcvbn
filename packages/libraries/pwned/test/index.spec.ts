@@ -1,4 +1,4 @@
-import { zxcvbnAsync, zxcvbnOptions } from '../../main/src'
+import { Zxcvbn } from '../../main/src'
 import { matcherPwnedFactory } from '../src'
 
 describe('main', () => {
@@ -8,10 +8,12 @@ describe('main', () => {
         return `008A205652858375D71117A63004CC75167:5\r\n3EA386688A0147AB736AABCEDE496610382:244`
       },
     }))
-    // @ts-ignore
-    zxcvbnOptions.matchers.pwned = matcherPwnedFactory(fetch, zxcvbnOptions)
-    const result = await zxcvbnAsync('P4$$w0rd')
 
+    const zxcvbn = new Zxcvbn()
+    // @ts-expect-error
+    zxcvbn.addMatcher('pwned', matcherPwnedFactory(fetch))
+
+    const result = await zxcvbn.checkAsync('P4$$w0rd')
     expect(result.calcTime).toBeDefined()
     result.calcTime = 0
     expect(result).toEqual({
@@ -54,9 +56,12 @@ describe('main', () => {
     const fetch = jest.fn(async () => {
       throw new Error('Some Network error')
     })
-    zxcvbnOptions.matchers.pwned = matcherPwnedFactory(fetch, zxcvbnOptions)
-    const result = await zxcvbnAsync('P4$$w0rd')
 
+    const zxcvbn = new Zxcvbn()
+    // @ts-expect-error
+    zxcvbn.addMatcher('pwned', matcherPwnedFactory(fetch))
+
+    const result = await zxcvbn.checkAsync('P4$$w0rd')
     expect(result.calcTime).toBeDefined()
     result.calcTime = 0
     expect(result).toEqual({

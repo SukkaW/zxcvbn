@@ -1,9 +1,9 @@
 import * as zxcvbnCommonPackage from '../../../languages/common/src'
 import * as zxcvbnEnPackage from '../../../languages/en/src'
-import { zxcvbn, zxcvbnAsync, zxcvbnOptions } from '../src'
+import { Zxcvbn } from '../src'
 import { Matcher, MatchExtended } from '../src/types'
 
-zxcvbnOptions.setOptions({
+const zxcvbn = new Zxcvbn({
   dictionary: {
     ...zxcvbnCommonPackage.dictionary,
     ...zxcvbnEnPackage.dictionary,
@@ -41,11 +41,11 @@ const asyncMatcher: Matcher = {
   },
 }
 
-zxcvbnOptions.addMatcher('minLength', asyncMatcher)
+zxcvbn.addMatcher('minLength', asyncMatcher)
 
 describe('asyncMatcher', () => {
   it('should use async matcher as a promise', async () => {
-    const promiseResult = zxcvbnAsync('ep8fkw8ds')
+    const promiseResult = zxcvbn.checkAsync('ep8fkw8ds')
     expect(promiseResult instanceof Promise).toBe(true)
 
     const result = await promiseResult
@@ -54,7 +54,7 @@ describe('asyncMatcher', () => {
 
   it('should throw an error for wrong function usage', async () => {
     expect(() => {
-      zxcvbn('ep8fkw8ds')
+      zxcvbn.check('ep8fkw8ds')
     }).toThrow(
       'You are using a Promised matcher, please use `zxcvbnAsync` for it.',
     )

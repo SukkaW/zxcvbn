@@ -14,6 +14,7 @@ import translationKeys from './data/translationKeys'
 import TrieNode from './matcher/dictionary/variants/matching/unmunger/TrieNode'
 import l33tTableToTrieNode from './matcher/dictionary/variants/matching/unmunger/l33tTableToTrieNode'
 
+// eslint-disable-next-line import/prefer-default-export
 export class Options {
   matchers: Matchers = {}
 
@@ -41,8 +42,9 @@ export class Options {
 
   maxLength: number = 256
 
-  constructor() {
+  constructor(options: OptionsType = {}) {
     this.setRankedDictionaries()
+    this.setOptions(options)
   }
 
   // eslint-disable-next-line max-statements,complexity
@@ -172,5 +174,3 @@ export class Options {
     }
   }
 }
-
-export const zxcvbnOptions = new Options()

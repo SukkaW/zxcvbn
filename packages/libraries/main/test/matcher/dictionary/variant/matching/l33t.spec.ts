@@ -1,11 +1,12 @@
 import MatchL33t from '../../../../../src/matcher/dictionary/variants/matching/l33t'
 import MatchDictionary from '../../../../../src/matcher/dictionary/matching'
 import checkMatches from '../../../../helper/checkMatches'
-import { zxcvbnOptions } from '../../../../../src/Options'
+import { Options } from '../../../../../src/Options'
 import { sorted } from '../../../../../src/helper'
 
+const zxcvbnOptions = new Options()
 zxcvbnOptions.setOptions()
-const dictionaryMatcher = new MatchDictionary()
+const dictionaryMatcher = new MatchDictionary(zxcvbnOptions)
 
 describe('l33t matching', () => {
   let msg
@@ -24,7 +25,10 @@ describe('l33t matching', () => {
   }
 
   describe('default const', () => {
-    const matchL33t = new MatchL33t(dictionaryMatcher.defaultMatch)
+    const matchL33t = new MatchL33t(
+      zxcvbnOptions,
+      dictionaryMatcher.defaultMatch,
+    )
     it("doesn't match single-character l33ted words", () => {
       expect(matchL33t.match({ password: '4 1 @' })).toEqual([])
     })
@@ -35,7 +39,7 @@ describe('l33t matching', () => {
     l33tTable: testTable,
     l33tMaxSubstitutions: 15,
   })
-  const matchL33t = new MatchL33t(dictionaryMatcher.defaultMatch)
+  const matchL33t = new MatchL33t(zxcvbnOptions, dictionaryMatcher.defaultMatch)
 
   describe('main match', () => {
     it("doesn't match ''", () => {
